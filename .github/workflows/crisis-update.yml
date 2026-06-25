@@ -1,0 +1,34 @@
+name: 🚨 Actualizar cifras terremoto Venezuela
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  update-crisis-stats:
+    name: Scraping cifras de víctimas
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Actualizar cifras (crisis-stats)
+        run: |
+          HTTP_STATUS=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            --max-time 30 \
+            -X POST \
+            "${{ secrets.SITE_URL }}/api/crisis-stats.php" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}")
+          echo "HTTP Status: $HTTP_STATUS"
+          cat /tmp/response.txt
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "⚠️ El endpoint devolvió $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Actualizar noticias RSS (fetch-news)
+        run: |
+          curl -s --max-time 60 \
+            -X POST \
+            "${{ secrets.SITE_URL }}/api/fetch-news.php" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}"
