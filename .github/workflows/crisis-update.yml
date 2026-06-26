@@ -9,7 +9,7 @@ jobs:
   update-crisis-stats:
     name: Scraping cifras de víctimas
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
 
     steps:
       - name: Actualizar cifras (crisis-stats)
@@ -19,10 +19,10 @@ jobs:
             -X POST \
             "${{ secrets.SITE_URL }}/api/crisis-stats.php" \
             -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}")
-          echo "HTTP Status: $HTTP_STATUS"
+          echo "HTTP Status crisis-stats: $HTTP_STATUS"
           cat /tmp/response.txt
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "⚠️ El endpoint devolvió $HTTP_STATUS"
+            echo "⚠️ crisis-stats devolvió $HTTP_STATUS"
             exit 1
           fi
 
@@ -32,3 +32,17 @@ jobs:
             -X POST \
             "${{ secrets.SITE_URL }}/api/fetch-news.php" \
             -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}"
+
+      - name: Scraping BBC Mundo live
+        run: |
+          HTTP_STATUS=$(curl -s -o /tmp/bbc.txt -w "%{http_code}" \
+            --max-time 30 \
+            -X POST \
+            "${{ secrets.SITE_URL }}/api/fetch-bbc-live.php" \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}")
+          echo "HTTP Status BBC live: $HTTP_STATUS"
+          cat /tmp/bbc.txt
+
+      - name: Resultado
+        if: always()
+        run: echo "✅ Ciclo completado — $(date '+%Y-%m-%d %H:%M:%S UTC')"
