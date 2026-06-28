@@ -1,36 +1,18 @@
-name: 🚨 Actualizar cifras terremoto Venezuela
+name: 🗞️ Actualizar noticias y sismos — NoticiaVZLA
 
 on:
   schedule:
-    - cron: '0 8,20 * * *'
+    # Cada hora en punto
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
-  update-crisis-stats:
-    name: Scraping cifras de víctimas
+  update:
+    name: Noticias + RSS + GDACS
     runs-on: ubuntu-latest
     timeout-minutes: 4
 
     steps:
-      - name: Actualizar cifras (crisis-stats)
-        run: |
-          HTTP_STATUS=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
-            --max-time 30 \
-            -X POST \
-            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}" \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
-            -H "Accept: application/json, text/plain, */*" \
-            -H "Accept-Language: es-ES,es;q=0.9" \
-            -H "Referer: ${{ secrets.SITE_URL }}/" \
-            -H "Origin: ${{ secrets.SITE_URL }}" \
-            "${{ secrets.SITE_URL }}/api/crisis-stats.php")
-          echo "HTTP Status crisis-stats: $HTTP_STATUS"
-          cat /tmp/response.txt
-          if [ "$HTTP_STATUS" = "403" ]; then
-            echo "⚠️ Bloqueado por firewall — verificar whitelist de IP en hosting"
-            exit 1
-          fi
-
       - name: Actualizar noticias RSS (fetch-news)
         run: |
           curl -s --max-time 60 \
@@ -42,6 +24,7 @@ jobs:
             -H "Referer: ${{ secrets.SITE_URL }}/" \
             -H "Origin: ${{ secrets.SITE_URL }}" \
             "${{ secrets.SITE_URL }}/api/fetch-news.php" || true
+          echo "✔ fetch-news completado"
 
       - name: Scraping BBC Mundo live
         run: |
@@ -54,10 +37,18 @@ jobs:
             -H "Referer: ${{ secrets.SITE_URL }}/" \
             -H "Origin: ${{ secrets.SITE_URL }}" \
             "${{ secrets.SITE_URL }}/api/fetch-bbc-live.php" || true
+          echo "✔ fetch-bbc-live completado"
 
       - name: Actualizar caché GDACS (sismos Venezuela)
         run: |
-          curl -s --max-time 20             -X POST             -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}"             -H "User-Agent: Mozilla/5.0 (compatible; NoticiaVZLA/1.0)"             "${{ secrets.SITE_URL }}/api/gdacs-sismos.php" || true
+          curl -s --max-time 20 \
+            -X POST \
+            -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}" \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Referer: ${{ secrets.SITE_URL }}/" \
+            "${{ secrets.SITE_URL }}/api/gdacs-sismos.php" || true
+          echo "✔ gdacs-sismos completado"
 
       - name: Resultado
         if: always()
