@@ -2,7 +2,7 @@ name: 🚨 Actualizar cifras terremoto Venezuela
 
 on:
   schedule:
-  - cron: '0 8,20 * * *'
+    - cron: '0 8,20 * * *'
   workflow_dispatch:
 
 jobs:
@@ -54,6 +54,10 @@ jobs:
             -H "Referer: ${{ secrets.SITE_URL }}/" \
             -H "Origin: ${{ secrets.SITE_URL }}" \
             "${{ secrets.SITE_URL }}/api/fetch-bbc-live.php" || true
+
+      - name: Actualizar caché GDACS (sismos Venezuela)
+        run: |
+          curl -s --max-time 20             -X POST             -H "X-Cron-Key: ${{ secrets.CRON_SECRET }}"             -H "User-Agent: Mozilla/5.0 (compatible; NoticiaVZLA/1.0)"             "${{ secrets.SITE_URL }}/api/gdacs-sismos.php" || true
 
       - name: Resultado
         if: always()
